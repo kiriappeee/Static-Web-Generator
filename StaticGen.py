@@ -9,6 +9,7 @@ import os
 
 BlogInfo = namedtuple('BlogInfo', 'postTitle, postContent')
 INDEX_FILE_PATH = r"D:\Programming\Python\mystatic\Static Test Site\index.html"
+ARCHIVE_FILE_PATH = r"D:\Programming\Python\mystatic\Static Test Site\archive-copy.html"
 MAX_INDEX_POSTS = 15
 
 def getFileInfo(htmlCode):
@@ -44,12 +45,7 @@ def alterPostTime(htmlCode):
     postTimeInfo.find(text=re.compile('Posted on')).replaceWith('Posted on %s %s %s by '%(postMonth, postDay, postYear))
     return htmlCode
 
-def getFileAsSoup(fileName):
-    """Function to get the html code and return a beautifulsoup object for the other functions to work on"""
-    htmlFile = open(fileName, 'rb')
-    htmlCode = BeautifulSoup(htmlFile.read())
-    htmlFile.close()
-    return htmlCode
+#code to insert the post
 
 def checkIndexPostsLength():
     """Checks how many posts there are on the index page and returns the number as an integer"""
@@ -60,10 +56,8 @@ def checkIndexPostsLength():
 
 def insertPost(blogInfo, indexPostLength, fileName):
     """function to check how many posts are there in the index file and if there are 15 then it removes the oldest post and inserts a new one.
-    if there are less than 15 posts then it simply adds one to the zeroth index"""
-    indexFile = open(INDEX_FILE_PATH, 'rb')
-    indexCode = BeautifulSoup(indexFile.read())
-    indexFile.close()    
+    if there are less than 15 posts then it simply adds one to the zeroth index. The function then returns the new post title that was created."""
+    indexCode = getFileAsSoup(INDEX_FILE_PATH)
     if indexPostLength == MAX_INDEX_POSTS:
         indexCode = removeOldestPost(indexCode)    
     newPost = Tag(BeautifulSoup(), 'div', attrs={'class':'post'})
@@ -77,12 +71,57 @@ def insertPost(blogInfo, indexPostLength, fileName):
     indexFile = open(INDEX_FILE_PATH, 'wb')
     indexFile.write(indexCode.prettify())
     indexFile.close()
+    return postTitle
 
 def removeOldestPost(indexCode):
     """function to remove the oldest post from the index file"""
     indexCode.findAll('div','post')[14].extract()
     return indexCode
 
+#code to archive the post
+def insertArchive(blogInfo, postTitle):
+    #check if the archive period exists within the archive file
+    archivePeriodExists = checkArchivePeriod()
+    if (archivePeriodExists[0] = False or archivePeriodExists[1] = False):
+        insertArchivePeriod(archivePeriodExists)
+
+
+def checkArchivePeriod():
+    """function to go through the archive.html file to check if the relevant month and year exist under the archive.html file
+    function returns a tuple of boolean values which represents whether the year and the month exist respectively"""
+    archiveCode = getFileAsSoup(ARCHIVE_FILE_PATH)
+    #search for the year
+    postTime = datetime.now()
+    yearExists = archiveCode.find('h4', text = re.compile(r"%s"%postTime.year)) is not None
+    monthExists = yearExists and (archiveCode.find('h4', text= re.compile(r"%s"%postTime.year)).parent.nextSibling.nextSibling.find(
+            'a', text="February") is not None)
+
+    return (yearExists, monthExists)
+
+def insertArchivePeriod(archivePeriodExists):
+    postTime = datetime.now()
+    soupParser = BeautifulSoup()
+    archiveCode = getFileAsSoup(ARCHIVE_FILE_PATH)
+    archiveTag = archiveCode.find('div', 'content archive-content')
+    if not archivePeriodExists[0]:
+        """Build a tag that follows the format of <li><h4>YEAR</h4></li><ul></ul>
+        This tag goes under the div content archive-content section as the first element so that the years will be displayed in chronological order of newest to oldest"""
+        yearListLI = Tag(soupParser, 'li')
+        yearH4 = Tag(soupParser, 'h4')
+        yearH4.insert(0, str(postTime.year))
+        yearListMonthUL =Tag(soupParser, 'ul')
+        yearListLI.insert(0, yearH4)
+        yearListLI.insert(1, yearListMonthUL)
+        yearListLI = BeautifulSoup(yearListLI)
+        archiveTag.ul.insert(0, yearListLI)
+    else:
+        #locate the tag that we would have built if the year did not exist
+        yearListMonthUL = archiveTag.find('h4', text=re.compile(str(postTime.year))).parent.nextSibling.nextSibling
+        
+    monthLI = Tag(soupParser('li', attrs={'class':'month'}))
+    monthLI.insert(
+
+        
 def doPost(fileName):
     htmlCode = getFileAsSoup(fileName)
     htmlCode = alterPostTime(htmlCode)
@@ -90,4 +129,15 @@ def doPost(fileName):
     htmlFile.write(str(htmlCode))
     htmlFile.close()
     blogInfo = getFileInfo(htmlCode)
-    insertPost(blogInfo, checkIndexPostsLength(), fileName)
+    postTitle = insertPost(blogInfo, checkIndexPostsLength(), fileName)
+    
+    insertArchive(blogInfo, postTitle)
+
+
+
+def getFileAsSoup(fileName):
+    """Function to get the html code and return a beautifulsoup object for the other functions to work on"""
+    htmlFile = open(fileName, 'rb')
+    htmlCode = BeautifulSoup(htmlFile.read())
+    htmlFile.close()
+    return htmlCode
