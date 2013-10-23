@@ -107,9 +107,8 @@ def checkArchivePeriod():
     archiveCode = getFileAsSoup(ARCHIVE_FILE_PATH)
     #search for the year
     postTime = datetime.now()
-    yearExists = archiveCode.find('h4', text = re.compile(r"%s"%postTime.year)) is not None
-    monthExists = yearExists and (archiveCode.find('h4', text= re.compile(r"%s"%postTime.year)).parent.nextSibling.nextSibling.find(
-            'a', text=calendar.month_name[postTime.month]) is not None)
+    yearExists = archiveCode.find('h4', text = re.compile(r"%s"%postTime.year)) is not None   
+    monthExists = yearExists and (archiveCode.find('h4', text= re.compile(r"%s"%postTime.year)).parent.nextSibling.nextSibling.li.text == calendar.month_name[postTime.month])
 
     return (yearExists, monthExists)
 
@@ -137,8 +136,8 @@ def insertArchivePeriod(archivePeriodExists):
     monthLI = Tag(soupParser, 'li', attrs={'class':'month'})
     archiveFileLink = Tag(soupParser,'a', attrs={'href':'archives/%s%s.html'%(calendar.month_name[postTime.month],postTime.year)})
     archiveFileLink.insert(0, '%s'%calendar.month_name[postTime.month])
-    monthLI.insert(0, archiveFileLink)
-
+    #monthLI.insert(0, archiveFileLink)
+    monthLI.insert(0, calendar.month_name[postTime.month])
     #inser the month tag we just created into the year area. Note that the months will be arranged from newest to oldest.
     yearListMonthUL.insert(0, monthLI)    
     yearListMonthUL.insert(1, Tag(soupParser, 'ul', attrs={'class':'articles'}))
