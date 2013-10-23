@@ -79,11 +79,26 @@ def removeOldestPost(indexCode):
     return indexCode
 
 #code to archive the post
-def insertArchive(blogInfo, postTitle):
+def insertArchive(blogInfo, fileName):
     #check if the archive period exists within the archive file
     archivePeriodExists = checkArchivePeriod()
-    if (archivePeriodExists[0] = False or archivePeriodExists[1] = False):
-        insertArchivePeriod(archivePeriodExists)
+    if (not archivePeriodExists[0] or not archivePeriodExists[1]):
+        archiveCode = insertArchivePeriod(archivePeriodExists)
+    else:
+        archiveCode = getFileAsSoup(ARCHIVE_FILE_PATH)
+    soupParser = BeautifulSoup()
+    #since we organise our posts in reverse chronological order we don't need to use the posttime to find the necessary tag
+    archivePeriod = archiveCode.find('ul','articles')
+    newPostLI = Tag(soupParser, 'li')
+    newPostLink = Tag(soupParser, 'a', attrs = {'href':'posts/%s'%os.path.basename(fileName)})
+    newPostLink.insert(0, blogInfo.postTitle)
+    newPostLI.insert(0, newPostLink)
+
+    archivePeriod.insert(0,newPostLI)
+    archiveFile = open(ARCHIVE_FILE_PATH, 'wb')
+    archiveFile.write(archiveCode.prettify())
+    archiveFile.close()
+
 
 
 def checkArchivePeriod():
@@ -94,7 +109,7 @@ def checkArchivePeriod():
     postTime = datetime.now()
     yearExists = archiveCode.find('h4', text = re.compile(r"%s"%postTime.year)) is not None
     monthExists = yearExists and (archiveCode.find('h4', text= re.compile(r"%s"%postTime.year)).parent.nextSibling.nextSibling.find(
-            'a', text="February") is not None)
+            'a', text=calendar.month_name[postTime.month]) is not None)
 
     return (yearExists, monthExists)
 
@@ -118,9 +133,17 @@ def insertArchivePeriod(archivePeriodExists):
         #locate the tag that we would have built if the year did not exist
         yearListMonthUL = archiveTag.find('h4', text=re.compile(str(postTime.year))).parent.nextSibling.nextSibling
         
-    monthLI = Tag(soupParser('li', attrs={'class':'month'}))
-    monthLI.insert(
+    #construct the month list tag which is where we need to inser the new articles into
+    monthLI = Tag(soupParser, 'li', attrs={'class':'month'})
+    archiveFileLink = Tag(soupParser,'a', attrs={'href':'archives/%s%s.html'%(calendar.month_name[postTime.month],postTime.year)})
+    archiveFileLink.insert(0, '%s'%calendar.month_name[postTime.month])
+    monthLI.insert(0, archiveFileLink)
 
+    #inser the month tag we just created into the year area. Note that the months will be arranged from newest to oldest.
+    yearListMonthUL.insert(0, monthLI)    
+    yearListMonthUL.insert(1, Tag(soupParser, 'ul', attrs={'class':'articles'}))
+    archiveCode = BeautifulSoup(archiveCode.prettify())
+    return archiveCode
         
 def doPost(fileName):
     htmlCode = getFileAsSoup(fileName)
@@ -131,7 +154,7 @@ def doPost(fileName):
     blogInfo = getFileInfo(htmlCode)
     postTitle = insertPost(blogInfo, checkIndexPostsLength(), fileName)
     
-    insertArchive(blogInfo, postTitle)
+    insertArchive(blogInfo, fileName)
 
 
 
