@@ -57,16 +57,35 @@ def checkIndexPostsLength():
 def insertPost(blogInfo, indexPostLength, fileName):
     """function to check how many posts are there in the index file and if there are 15 then it removes the oldest post and inserts a new one.
     if there are less than 15 posts then it simply adds one to the zeroth index. The function then returns the new post title that was created."""
+    d = datetime.now()
+    suffix = '' 
+    if 4 <= d.day <= 20 or 24 <= d.day <= 30:
+        suffix = "th"
+    else:
+        suffix = ["st", "nd", "rd"][d.day % 10 - 1]
+    postMonth = calendar.month_name[d.month]
+    postDay = str(d.day) + suffix
+    postYear = str(d.year)
+
     indexCode = getFileAsSoup(INDEX_FILE_PATH)
     if indexPostLength == MAX_INDEX_POSTS:
         indexCode = removeOldestPost(indexCode)    
     newPost = Tag(BeautifulSoup(), 'div', attrs={'class':'post'})
     postTitle = Tag(BeautifulSoup(), 'h1')
-    postLink = Tag(BeautifulSoup(), 'a', attrs={'href':'/posts/%s'%os.path.basename(fileName)})
+    postLink = Tag(BeautifulSoup(), 'a', attrs={'href':'posts/%s'%os.path.basename(fileName)})
     postLink.insert(0, blogInfo.postTitle)
     postTitle.insert(0, postLink)    
     newPost.insert(0, postTitle)
     newPost.insert(1, blogInfo.postContent)
+    postedOn = Tag(BeautifulSoup(), 'p', attrs={'class':'post-time'})
+    
+    dateLink = Tag(BeautifulSoup(), 'a', attrs={'href':'posts/%s'%os.path.basename(fileName)})
+    dateLink.insert(0, '%s %s %s - '%(postMonth, postDay, postYear))
+    commentLink =  Tag(BeautifulSoup(), 'a', attrs={'href':'posts/%s%s'%(os.path.basename(fileName),'#disqus_thread')})
+    postedOn.insert(0, 'Posted on ')
+    postedOn.insert(1, dateLink)
+    postedOn.insert(2, commentLink)
+    newPost.insert(2, postedOn)
     indexCode.find('div','content').insert(0, newPost)
     indexFile = open(INDEX_FILE_PATH, 'wb')
     indexFile.write(indexCode.prettify())
