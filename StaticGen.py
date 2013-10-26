@@ -145,7 +145,6 @@ def insertArchivePeriod(archivePeriodExists):
         yearListMonthUL =Tag(soupParser, 'ul')
         yearListLI.insert(0, yearH4)
         yearListLI.insert(1, yearListMonthUL)
-        yearListLI = BeautifulSoup(yearListLI)
         archiveTag.ul.insert(0, yearListLI)
     else:
         #locate the tag that we would have built if the year did not exist
