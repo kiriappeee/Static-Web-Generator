@@ -4,13 +4,16 @@ from datetime import datetime
 import calendar
 import re
 import os
+import PyRSS2Gen
 
 """Create a named tuple to hold the information about the blog post since the post itself is only information without any methods or need to change the variables within it."""
 
 BlogInfo = namedtuple('BlogInfo', 'postTitle, postContent')
 INDEX_FILE_PATH = r"D:\Programming\Python\mystatic\Static Test Site\index.html"
 ARCHIVE_FILE_PATH = r"D:\Programming\Python\mystatic\Static Test Site\archive-copy.html"
+RSS_FILE_PATH = r"D:\Programming\Python\mystatic\Static Test Site\rss.xml"
 MAX_INDEX_POSTS = 15
+PARENT_URL_PATH = "http://adnanissadeen.com/"
 
 def getFileInfo(htmlCode):
     """Function takes an appropriately formatted HTML file in and returns a BlogInfo Object"""    
@@ -173,7 +176,37 @@ def doPost(fileName):
     
     insertArchive(blogInfo, fileName)
 
+def makeRSS():
+    blogSoup = getFileAsSoup(INDEX_FILE_PATH)
+    postsSoup = blogSoup.findAll('div', 'post')
+    RSSitems = []
 
+    for postSoup in postsSoup:
+        header =  postSoup.find('h1')
+        iterPoint = postSoup.h1
+        content = ''
+        #iterate through each sibling of the html until we come to the end of the post which is signalled by the post time p
+        while True:
+            #print iterPoint
+            iterPoint = iterPoint.nextSibling
+            if iterPoint and hasattr(iterPoint, 'attrs') and iterPoint.attrs == [('class','post-time')]:
+                break
+            elif iterPoint:
+                content += str(iterPoint)
+        content = BeautifulSoup(content)
+
+        RSSitems.append(PyRSS2Gen.RSSItem(
+            title = header.text,
+            link = PARENT_URL_PATH + header.a['href'],
+            description = content.prettify()))
+        
+    rss = PyRSS2Gen.RSS2(
+            title = "Adnan Issadeen Meets Blogging",
+            link = "http://adnanissadeen.com/blogindex.html",
+            description = "The blog from the world of adnan issadeen",
+            lastBuildDate = datetime.now(),
+            items = RSSitems)
+    rss.write_xml(open(RSS_FILE_PATH, 'w'))
 
 def getFileAsSoup(fileName):
     """Function to get the html code and return a beautifulsoup object for the other functions to work on"""
