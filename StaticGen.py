@@ -173,7 +173,7 @@ def doPost(fileName):
     htmlFile.close()
     blogInfo = getFileInfo(htmlCode)
     postTitle = insertPost(blogInfo, checkIndexPostsLength(), fileName)
-    
+    makeRSS()
     insertArchive(blogInfo, fileName)
 
 def makeRSS():
